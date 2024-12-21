@@ -1,13 +1,9 @@
-#define _CRT_SECURE_NO_WARNINGS
-#define _USE_MATH_DEFINES
-
 #include<iostream>
 #include <vector>
 #include <algorithm>
 #include <cmath>
 #include <math.h>
 #include <map>
-#include <queue>
 #include <stdlib.h>
 #include <stdio.h>
 #include <map>
@@ -15,11 +11,175 @@
 #include <unordered_set>
 #include <cmath>
 #include <complex>
-#define ll long long
+#include <iostream>
+#include <cmath>
+#include <algorithm>
+#include <fstream>
+#include <set>
+#include <vector>
+#include <map>
+#include <queue>
+#include <stack>
+#include <string>
+#include <cstring>
+#include <unordered_set>
+#include <unordered_map>
 #define int long long
-#define cd complex<double>
+#define ll long long
+#define nl "\n"
 
 using namespace std;
+
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// lca
+
+struct LCA{
+
+    struct Node{
+        int val;
+        bool isVisited;
+        vector<Node> neighbours;
+
+        Node(ll val): val(val), isVisited(false){}
+    };
+
+    vector<vector<int>> up;
+    vector<int> dist;
+    vector<Node> tree;
+
+    LCA(int n) {
+        up.resize(n+1, vector<int>(31));
+        dist.resize(n+1);
+        tree.resize(n+1);
+
+        dist[1] = 0;
+        for(int i = 0; i <= 30; i++){
+            up[1][i] = 0;
+        }
+
+        for(int i = 0; i < n+1; i++){
+            tree[i] = Node(i);
+        }
+    }
+
+    void add(int a, int b){
+        tree[a].neighbours.push_back(tree[b]);
+        tree[b].neighbours.push_back(tree[a]);
+
+        dist[b] = dist[a]+1;
+        up[b][0] = a;
+        for(int j = 1; j <= 30; j++){
+            up[b][j] = up[up[b][j-1]][j-1];
+        }
+    }
+
+    int lca(int a, int b){
+        if (dist[a] < dist[b]){
+            int tmp = a;
+            a = b;
+            b = tmp;
+        }
+
+        for (int j = 30; j >= 0; j--){
+            if (dist[up[a][j]] >= dist[b] && up[a][j] != 0){
+                a = up[a][j];
+            }
+        }
+        if(a == b){
+            return b;
+        }else {
+            for (int j = 30; j >= 0; j--) {
+                if (up[a][j] == up[b][j]) {
+                    continue;
+                } else {
+                    a = up[a][j];
+                    b = up[b][j];
+                }
+            }
+            return up[a][0];
+        }
+    }
+};
+
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// паросочетания
+
+vector<int> mt;
+int n, k;
+vector<bool> used;
+vector<Node> graph;
+
+struct Node{
+    int val;
+    vector<Node> neighbours;
+
+    Node(int val): val(val) {}
+};
+
+void solve() {
+    // инициализация графа
+    cin >> n >> k;
+    graph.resize(n+k);
+    used.resize(n+k);
+    mt.resize(k);
+    for(int i = 0; i < n+k; i++){
+        graph[i] = Node(i);
+    }
+    for(int i = 0; i < n; i++){
+        int num;
+        cin >> num;
+        while(num != 0){
+            graph[i].neighbours.add(graph[n+num-1]);
+            graph[n+num-1].neighbours.add(graph[i]);
+            cin >> num;
+        }
+    }
+
+    // поиск максимального паросочетания
+    fill(mt.begin(), mt.end(), -1);
+    fill(used.begin(), used.end(), false);
+
+
+    for (int i = 0; i < n; i++) {
+        if(tryKuhn(graph[i])){
+            fill(used.begin(), used.end(), false);
+        }
+    }
+
+    vector<string> res;
+    for(int i = 0; i < mt.size(); i++){
+        if(mt[i] != -1){
+            res.push_back((mt[i]+1) + " " + (i+1));
+        }
+    }
+
+    cout << res.size(); // размер максимального паросочетания
+    for(string s : res){
+        cout << s << nl; // пара вершин в паросочетании
+    }
+}
+
+bool tryKuhn(Node curr){
+    if(used[curr.val]){
+        return false;
+    }
+    used[curr.val] = true;
+    for(Node node : curr.neighbours){
+        int idx = node.val - n;
+        if(mt[idx] == -1){
+            mt[idx] = curr.val;
+            return true;
+        }else if(tryKuhn(graph[mt[idx]])){
+            mt[idx] = curr.val;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// потоки
 
 struct FlowGraph {
     struct Edge {
@@ -247,77 +407,3 @@ struct FlowGraph {
         return Pair(flow, cost);
     }
 };
-
-
-int solve() {
-
-    int r, c;
-    cin >> r >> c;
-
-    FlowGraph g = FlowGraph();
-    g.init(2 * r * c + 2);
-
-    vector<vector<bool>> matrix (r, vector<bool> (c));
-    ll cnt = 0;
-    for (int i = 0; i < r; i++) {
-        string s;
-        cin >> s;
-        for (int j = 0; j < c; j++) {
-            matrix[i][j] = s[j] == '.';
-            cnt += matrix[i][j] ? 1 : 0;
-        }
-    }
-
-    for (int i = 1; i <= r * c; i++) {
-        g.addEdge(0, i, 1, 0, 0);
-    }
-    for (int i = r * c + 1; i <= 2 * r * c; i++) {
-        g.addEdge(i, 2 * r * c + 1, 1, 0, 0);
-    }
-
-    for (int i = 0; i < r; i++) {
-        for (int j = 0; j < c; j++) {
-            if (matrix[i][j]) {
-                if (i + 1 < r && matrix[i + 1][j]) {
-                    g.addEdge(i * c + j + 1, r * c + (i + 1) * c + j + 1, 1, 0, 0);
-                }
-                if (i - 1 >= 0 && matrix[i - 1][j]) {
-                    g.addEdge(i * c + j + 1, r * c + (i - 1) * c + j + 1, 1, 0, 0);
-                }
-                if (j + 1 < c && matrix[i][j + 1]) {
-                    g.addEdge(i * c + j + 1, r * c + i * c + (j + 1) + 1, 1, 0, 0);
-                }
-                if (j - 1 >= 0 && matrix[i][j - 1]) {
-                    g.addEdge(i * c + j + 1, r * c + i * c + (j - 1) + 1, 1, 0, 0);
-                }
-            }
-        }
-    }
-
-    ll res = g.dinic();
-    if (res == cnt) {
-        cout << "Yes";
-    }
-    else {
-        cout << "No";
-    }
-
-    return 0;
-}
-
-
-signed main() {
-#ifdef _DEBUG:
-    freopen("input.txt", "r", stdin);
-    freopen("output.txt", "w", stdout);
-#endif
-    std::ios::sync_with_stdio(false);
-    cin.tie(0);
-    cout.tie(0);
-
-    int T = 1;
-    //    cin >> T;
-    while (T--) {
-        solve();
-    }
-}
